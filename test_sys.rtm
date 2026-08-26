@@ -1,0 +1,35 @@
+// Test Sistema
+j inicio
+.word 0
+.word 0
+.word 0
+
+// Vector 4 (Handler del Trap 4)
+handler:
+    addi $t4, $zero, 99
+    rft
+
+inicio:
+    addi $t0, $zero, 1024
+    cts $t0, $4   // S[4] (VBR) = 1024
+    cfs $t1, $4   // R2 = VBR
+    
+    // Restaurar VBR para el TRAP
+    lci $t2, $zero, 0xF000 // R3 = 0xF0000000
+    cts $t2, $4
+    
+    // Disparar TRAP 4 (Salta a handler)
+    trap 4
+    
+    // Volver del TRAP y probar JAL / JR
+    jal subrutina
+    
+    // Instrucción al volver del JAL
+    addi $t5, $zero, 77
+    
+infinito:
+    j infinito
+
+subrutina:
+    addi $a0, $zero, 66
+    jr $ra, 0
