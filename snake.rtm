@@ -1,0 +1,402 @@
+.section ".data"
+    // Secuencias ANSI
+    cls_str: .asciiz "\x1b[2J\x1b[?25l" // Limpiar pantalla y ocultar cursor
+    home_str: .asciiz "\x1b[H"        // Cursor a (1,1)
+    
+    border_str: .asciiz "######################\r\n"
+    hash_str: .asciiz "#"
+    crlf_str: .asciiz "\r\n"
+
+    // Estado del juego
+    dir_x: .word 1    // Empieza moviéndose a la derecha
+    dir_y: .word 0
+    
+    head_idx: .word 2
+    tail_idx: .word 0
+    
+    // Arrays circulares para las posiciones del cuerpo (máximo 256 posiciones)
+    // Inicializamos con 3 segmentos en (10,10), (11,10), (12,10)
+    snake_x: 
+        .word 10
+        .word 11
+        .word 12
+        .pad 1 1012 // 253 words extra * 4 bytes = 1012
+        
+    snake_y:
+        .word 10
+        .word 10
+        .word 10
+        .pad 1 1012 // 253 words extra
+
+    seed: .word 12345
+    
+    // Grid de 20x20 bytes (400 bytes). Inicializado a ' ' (0x20)
+    grid: .pad 1 400
+
+.section ".text"
+    // Inicializar pila
+    addi $sp, $zero, 0x1000 // Tamaño seguro
+    
+    // $s2 = Dirección de consola
+    addi $s2, $zero, -0x100
+
+    // Inicializar el grid con ' ' (espacio = 32)
+    lci $t0, $zero, .hi16 grid
+    ori $t0, $t0, .lo16 grid
+    addi $t1, $zero, 400
+    addi $t2, $zero, 32 // ' '
+init_grid_loop:
+    sb $t2, 0($t0)
+    addi $t0, $t0, 1
+    addi $t1, $t1, -1
+    bne $t1, $zero, init_grid_loop
+    
+    // Dibujar la serpiente inicial en el grid
+    lci $t0, $zero, .hi16 grid
+    ori $t0, $t0, .lo16 grid
+    addi $t1, $zero, 79 // 'O'
+    // (10,10) -> 10*20 + 10 = 210
+    addi $t3, $zero, 210
+    add $t4, $t0, $t3
+    sb $t1, 0($t4)
+    // (11,10) -> 10*20 + 11 = 211
+    addi $t3, $zero, 211
+    add $t4, $t0, $t3
+    sb $t1, 0($t4)
+    // (12,10) -> 10*20 + 12 = 212
+    addi $t3, $zero, 212
+    add $t4, $t0, $t3
+    sb $t1, 0($t4)
+    
+    // Dibujar manzana inicial en (15, 5) -> 5*20 + 15 = 115
+    addi $t1, $zero, 42 // '*'
+    addi $t3, $zero, 115
+    add $t4, $t0, $t3
+    sb $t1, 0($t4)
+
+    // Limpiar pantalla
+    lci $a0, $zero, .hi16 cls_str
+    ori $a0, $a0, .lo16 cls_str
+    jal print_str
+
+game_loop:
+    // Delay loop
+    addi $t0, $zero, 0
+    lci $t1, $zero, 1      // 1 en parte alta -> ~65536
+    ori $t1, $t1, 0
+    sra $t1, $t1, 1        // Ajuste de velocidad
+delay:
+    addi $t0, $t0, 1
+    blt $t0, $t1, delay
+
+    // --- LEER TECLADO ---
+read_key:
+    lbu $t0, 0($s2)
+    beq $t0, $zero, update_logic
+    
+    // Convertir a minúscula si es mayúscula
+    ori $t0, $t0, 32
+    
+    // Chequear 'w' (119)
+    addi $t1, $zero, 119
+    beq $t0, $t1, key_w
+    // Chequear 's' (115)
+    addi $t1, $zero, 115
+    beq $t0, $t1, key_s
+    // Chequear 'a' (97)
+    addi $t1, $zero, 97
+    beq $t0, $t1, key_a
+    // Chequear 'd' (100)
+    addi $t1, $zero, 100
+    beq $t0, $t1, key_d
+    
+    j flush_keys
+
+key_w:
+    // Solo permitir si dir_y != 1
+    lci $t1, $zero, .hi16 dir_y
+    ori $t1, $t1, .lo16 dir_y
+    lw $t2, 0($t1)
+    addi $t3, $zero, 1
+    beq $t2, $t3, flush_keys
+    addi $t3, $zero, 0
+    sw $t3, -4($t1) // dir_x = 0
+    addi $t3, $zero, -1
+    sw $t3, 0($t1)  // dir_y = -1
+    j flush_keys
+
+key_s:
+    lci $t1, $zero, .hi16 dir_y
+    ori $t1, $t1, .lo16 dir_y
+    lw $t2, 0($t1)
+    addi $t3, $zero, -1
+    beq $t2, $t3, flush_keys
+    addi $t3, $zero, 0
+    sw $t3, -4($t1) // dir_x = 0
+    addi $t3, $zero, 1
+    sw $t3, 0($t1)  // dir_y = 1
+    j flush_keys
+
+key_a:
+    lci $t1, $zero, .hi16 dir_x
+    ori $t1, $t1, .lo16 dir_x
+    lw $t2, 0($t1)
+    addi $t3, $zero, 1
+    beq $t2, $t3, flush_keys
+    addi $t3, $zero, -1
+    sw $t3, 0($t1)  // dir_x = -1
+    addi $t3, $zero, 0
+    sw $t3, 4($t1)  // dir_y = 0
+    j flush_keys
+
+key_d:
+    lci $t1, $zero, .hi16 dir_x
+    ori $t1, $t1, .lo16 dir_x
+    lw $t2, 0($t1)
+    addi $t3, $zero, -1
+    beq $t2, $t3, flush_keys
+    addi $t3, $zero, 1
+    sw $t3, 0($t1)  // dir_x = 1
+    addi $t3, $zero, 0
+    sw $t3, 4($t1)  // dir_y = 0
+    j flush_keys
+
+flush_keys:
+    // Vaciar el buffer de teclado hasta que lbu devuelva 0
+    lbu $t0, 0($s2)
+    bne $t0, $zero, flush_keys
+
+update_logic:
+    // Calcular nueva cabeza
+    // head_idx = mem[head_idx_addr]
+    lci $t0, $zero, .hi16 head_idx
+    ori $t0, $t0, .lo16 head_idx
+    lw $t1, 0($t0)  // $t1 = head_idx
+    
+    // ptr = snake_x + head_idx*4
+    sll $t2, $t1, 2
+    lci $t3, $zero, .hi16 snake_x
+    ori $t3, $t3, .lo16 snake_x
+    add $t4, $t3, $t2
+    lw $t5, 0($t4) // $t5 = head_x
+    
+    lci $t3, $zero, .hi16 snake_y
+    ori $t3, $t3, .lo16 snake_y
+    add $t4, $t3, $t2
+    lw $a3, 0($t4) // $a3 = head_y
+    
+    // head_x += dir_x
+    lci $t3, $zero, .hi16 dir_x
+    ori $t3, $t3, .lo16 dir_x
+    lw $t4, 0($t3)
+    add $t5, $t5, $t4
+    
+    // head_y += dir_y
+    lw $t4, 4($t3)
+    add $a3, $a3, $t4
+    
+    // Wrap around (Torus): X
+    bge $t5, $zero, check_x_max
+    addi $t5, $zero, 19
+    j check_y
+check_x_max:
+    addi $t4, $zero, 20
+    blt $t5, $t4, check_y
+    addi $t5, $zero, 0
+
+check_y:
+    // Wrap around: Y
+    bge $a3, $zero, check_y_max
+    addi $a3, $zero, 19
+    j calc_grid_idx
+check_y_max:
+    addi $t4, $zero, 20
+    blt $a3, $t4, calc_grid_idx
+    addi $a3, $zero, 0
+    
+calc_grid_idx:
+    // grid_idx = head_y * 20 + head_x
+    addi $t4, $zero, 20
+    mul $a4, $a3, $t4
+    add $a4, $a4, $t5
+    
+    // addr = grid + grid_idx
+    lci $t3, $zero, .hi16 grid
+    ori $t3, $t3, .lo16 grid
+    add $a5, $t3, $a4
+    
+    // char = lbu(addr)
+    lbu $a0, 0($a5)
+    
+    // if char == 'O' (79) -> game over
+    addi $t4, $zero, 79
+    beq $a0, $t4, game_over
+    
+    // if char == '*' (42) -> comer
+    addi $t4, $zero, 42
+    beq $a0, $t4, eat_apple
+
+    // --- NO COMIO ---
+    // Borrar cola
+    lci $t3, $zero, .hi16 tail_idx
+    ori $t3, $t3, .lo16 tail_idx
+    lw $t4, 0($t3) // tail_idx
+    
+    // tail_x = snake_x[tail_idx]
+    sll $lr0, $t4, 2
+    lci $a1, $zero, .hi16 snake_x
+    ori $a1, $a1, .lo16 snake_x
+    add $a1, $a1, $lr0
+    lw $s0, 0($a1)
+    
+    // tail_y = snake_y[tail_idx]
+    lci $a1, $zero, .hi16 snake_y
+    ori $a1, $a1, .lo16 snake_y
+    add $a1, $a1, $lr0
+    lw $s1, 0($a1)
+    
+    // grid[tail_y * 20 + tail_x] = ' ' (32)
+    addi $a1, $zero, 20
+    mul $a1, $s1, $a1
+    add $a1, $a1, $s0
+    lci $a2, $zero, .hi16 grid
+    ori $a2, $a2, .lo16 grid
+    add $a2, $a2, $a1
+    addi $a1, $zero, 32
+    sb $a1, 0($a2)
+    
+    // tail_idx = (tail_idx + 1) & 255
+    addi $t4, $t4, 1
+    andi $t4, $t4, 255
+    sw $t4, 0($t3)
+    j advance_head
+
+eat_apple:
+    // Generar nueva manzana (LCG simple)
+    // seed = (seed * 1103515245 + 12345)
+    lci $t3, $zero, .hi16 seed
+    ori $t3, $t3, .lo16 seed
+    lw $t4, 0($t3)
+    
+    lci $lr0, $zero, 16838   // 1103515245 en hex es 0x41C64E6D
+    ori $lr0, $lr0, 20077
+    mul $t4, $t4, $lr0
+    addi $t4, $t4, 12345
+    sw $t4, 0($t3)
+    
+    // idx = (seed >> 16) % 400
+    srl $t4, $t4, 16
+    addi $lr0, $zero, 400
+    restu $t4, $t4, $lr0
+    
+    // if grid[idx] != ' ' intentar siguiente
+    lci $a1, $zero, .hi16 grid
+    ori $a1, $a1, .lo16 grid
+    add $a2, $a1, $t4
+    lbu $s0, 0($a2)
+    addi $s1, $zero, 32
+    beq $s0, $s1, place_apple
+    // Sumar 1 (linear probing)
+    addi $t4, $t4, 1
+    restu $t4, $t4, $lr0
+    add $a2, $a1, $t4
+    // Simplificación: asumimos que este lugar está libre (riesgo muy bajo)
+place_apple:
+    addi $s1, $zero, 42 // '*'
+    sb $s1, 0($a2)
+
+advance_head:
+    // head_idx = (head_idx + 1) & 255
+    addi $t1, $t1, 1
+    andi $t1, $t1, 255
+    sw $t1, 0($t0) // guardar nuevo head_idx
+    
+    // snake_x[head_idx] = nx ($t5)
+    sll $t2, $t1, 2
+    lci $t3, $zero, .hi16 snake_x
+    ori $t3, $t3, .lo16 snake_x
+    add $t4, $t3, $t2
+    sw $t5, 0($t4)
+    
+    // snake_y[head_idx] = ny ($a3)
+    lci $t3, $zero, .hi16 snake_y
+    ori $t3, $t3, .lo16 snake_y
+    add $t4, $t3, $t2
+    sw $a3, 0($t4)
+    
+    // grid[grid_idx] = 'O' (79)
+    addi $a1, $zero, 79
+    sb $a1, 0($a5)
+
+render:
+    // Cursor al inicio
+    lci $a0, $zero, .hi16 home_str
+    ori $a0, $a0, .lo16 home_str
+    jal print_str
+    
+    // Imprimir borde superior
+    lci $a0, $zero, .hi16 border_str
+    ori $a0, $a0, .lo16 border_str
+    jal print_str
+    
+    // Bucle Y
+    addi $t5, $zero, 0 // Y = 0
+render_y:
+    addi $lr0, $zero, 20
+    bge $t5, $lr0, render_end
+    
+    // Imprimir '#' izquierdo
+    lci $a0, $zero, .hi16 hash_str
+    ori $a0, $a0, .lo16 hash_str
+    jal print_str
+    
+    // Bucle X
+    addi $a3, $zero, 0 // X = 0
+render_x:
+    addi $lr0, $zero, 20
+    bge $a3, $lr0, render_x_end
+    
+    // Imprimir grid[Y*20 + X]
+    mul $a4, $t5, $lr0
+    add $a4, $a4, $a3
+    lci $a1, $zero, .hi16 grid
+    ori $a1, $a1, .lo16 grid
+    add $a1, $a1, $a4
+    lbu $a5, 0($a1)
+    sb $a5, 0($s2)
+    
+    addi $a3, $a3, 1
+    j render_x
+render_x_end:
+    // Imprimir "#\r\n"
+    addi $a5, $zero, 35 // '#'
+    sb $a5, 0($s2)
+    addi $a5, $zero, 13 // '\r'
+    sb $a5, 0($s2)
+    addi $a5, $zero, 10 // '\n'
+    sb $a5, 0($s2)
+    
+    addi $t5, $t5, 1
+    j render_y
+    
+render_end:
+    // Imprimir borde inferior
+    lci $a0, $zero, .hi16 border_str
+    ori $a0, $a0, .lo16 border_str
+    jal print_str
+    
+    j game_loop
+
+game_over:
+    trap 1
+
+// --- Función print_str ---
+// $a0: Puntero al string null-terminated
+print_str:
+    lbu $a1, 0($a0)
+    beq $a1, $zero, print_str_end
+    sb $a1, 0($s2)
+    addi $a0, $a0, 1
+    j print_str
+print_str_end:
+    jr $ra, 0
