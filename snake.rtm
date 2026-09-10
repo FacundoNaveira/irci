@@ -1,38 +1,3 @@
-.section ".data"
-    // Secuencias ANSI
-    cls_str: .asciiz "\x1b[2J\x1b[?25l" // Limpiar pantalla y ocultar cursor
-    home_str: .asciiz "\x1b[H"        // Cursor a (1,1)
-    
-    border_str: .asciiz "######################\r\n"
-    hash_str: .asciiz "#"
-    crlf_str: .asciiz "\r\n"
-
-    // Estado del juego
-    dir_x: .word 1    // Empieza moviéndose a la derecha
-    dir_y: .word 0
-    
-    head_idx: .word 2
-    tail_idx: .word 0
-    
-    // Arrays circulares para las posiciones del cuerpo (máximo 256 posiciones)
-    // Inicializamos con 3 segmentos en (10,10), (11,10), (12,10)
-    snake_x: 
-        .word 10
-        .word 11
-        .word 12
-        .pad 1 1012 // 253 words extra * 4 bytes = 1012
-        
-    snake_y:
-        .word 10
-        .word 10
-        .word 10
-        .pad 1 1012 // 253 words extra
-
-    seed: .word 12345
-    
-    // Grid de 20x20 bytes (400 bytes). Inicializado a ' ' (0x20)
-    grid: .pad 1 400
-
 .section ".text"
     // Inicializar pila
     addi $sp, $zero, 0x1000 // Tamaño seguro
@@ -400,3 +365,54 @@ print_str:
     j print_str
 print_str_end:
     jr $ra, 0
+
+
+.section ".data"
+    // Secuencias ANSI (alineadas a 4 bytes incluyendo null)
+    cls_str: .asciiz "\x1b[2J\x1b[?25l " // 11 + 1 null = 12 bytes
+    home_str: .asciiz "\x1b[H"        // 3 + 1 null = 4 bytes
+    
+    border_str: .asciiz "######################\r\n   " // 27 + 1 null = 28 bytes
+    hash_str: .asciiz "#  " // 3 + 1 null = 4 bytes
+    crlf_str: .asciiz "\r\n " // 3 + 1 null = 4 bytes
+
+    // Estado del juego
+    dir_x: .word 1    // Empieza moviéndose a la derecha
+    dir_y: .word 0
+    
+    head_idx: .word 2
+    tail_idx: .word 0
+    
+    // Arrays circulares para las posiciones del cuerpo (máximo 256 posiciones)
+    // Inicializamos con 3 segmentos en (10,10), (11,10), (12,10)
+    snake_x: 
+        .word 10
+        .word 11
+        .word 12
+        .pad 1 1012 // 253 words extra * 4 bytes = 1012
+        
+    snake_y:
+        .word 10
+        .word 10
+        .word 10
+        .pad 1 1012 // 253 words extra
+
+    seed: .word 12345
+    
+    // Grid de 20x20 bytes (400 bytes). Inicializado a ' ' (0x20)
+    grid: .pad 1 400
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
