@@ -106,6 +106,8 @@ def main():
     except: pass
     
     print("Game started! Use W,A,S,D to move. Press 'q' to quit.")
+    time.sleep(1.0)
+    print("\x1b[2J\x1b[H", end="", flush=True)
     time.sleep(0.5)
     
     # Put terminal in raw mode

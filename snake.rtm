@@ -353,7 +353,11 @@ render_end:
     j game_loop
 
 game_over:
-    trap 1
+    lci $a0, $zero, .hi16 gameover_str
+    ori $a0, $a0, .lo16 gameover_str
+    jal print_str
+game_over_loop:
+    j game_over_loop
 
 // --- Función print_str ---
 // $a0: Puntero al string null-terminated
@@ -369,6 +373,7 @@ print_str_end:
 
 .section ".data"
     // Secuencias ANSI (alineadas a 4 bytes incluyendo null)
+    gameover_str: .asciiz "\r\n\r\n    *** GAME OVER ***\r\n    Press 'q' to quit\r\n"
     cls_str: .asciiz "\x1b[2J\x1b[?25l " // 11 + 1 null = 12 bytes
     home_str: .asciiz "\x1b[H"        // 3 + 1 null = 4 bytes
     
