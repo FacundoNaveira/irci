@@ -8,6 +8,10 @@ import termios
 import tty
 import os
 
+def consume_stdout(p):
+    for line in p.stdout:
+        pass
+
 def forward_uart(pty_path):
     # Open PTY
     try:
@@ -45,7 +49,7 @@ def forward_uart(pty_path):
 def main():
     print("Starting Emulator...")
     # Start emulator
-    p = subprocess.Popen(["./maquina rtm32/rtm32", "-d", "telnet"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen(["./maquina rtm32/rtm32", "-d", "telnet", "--log=INFO"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     
     pty_path = None
     
@@ -65,6 +69,10 @@ def main():
         return
         
     print(f"UART PTY found at {pty_path}")
+    
+    # Consume stdout in a background thread to prevent buffer fill up
+    threading.Thread(target=consume_stdout, args=(p,), daemon=True).start()
+    
     print("Connecting to debugger...")
     
     time.sleep(1.0)
