@@ -372,7 +372,7 @@ print_str_end:
     cls_str: .asciiz "\x1b[2J\x1b[?25l " // 11 + 1 null = 12 bytes
     home_str: .asciiz "\x1b[H"        // 3 + 1 null = 4 bytes
     
-    border_str: .asciiz "######################\r\n   " // 27 + 1 null = 28 bytes
+    border_str: .asciiz "######################\r\n" // 27 + 1 null = 28 bytes
     hash_str: .asciiz "#  " // 3 + 1 null = 4 bytes
     crlf_str: .asciiz "\r\n " // 3 + 1 null = 4 bytes
 
@@ -401,6 +401,10 @@ print_str_end:
     
     // Grid de 20x20 bytes (400 bytes). Inicializado a ' ' (0x20)
     grid: .pad 1 400
+
+
+
+
 
 
 
