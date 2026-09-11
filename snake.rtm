@@ -160,24 +160,15 @@ update_logic:
     lw $t4, 4($t3)
     add $a3, $a3, $t4
     
-    // Wrap around (Torus): X
-    bge $t5, $zero, check_x_max
-    addi $t5, $zero, 19
-    j check_y
-check_x_max:
+    // Check bounds: X
+    blt $t5, $zero, game_over
     addi $t4, $zero, 20
-    blt $t5, $t4, check_y
-    addi $t5, $zero, 0
+    bge $t5, $t4, game_over
 
-check_y:
-    // Wrap around: Y
-    bge $a3, $zero, check_y_max
-    addi $a3, $zero, 19
-    j calc_grid_idx
-check_y_max:
+    // Check bounds: Y
+    blt $a3, $zero, game_over
     addi $t4, $zero, 20
-    blt $a3, $t4, calc_grid_idx
-    addi $a3, $zero, 0
+    bge $a3, $t4, game_over
     
 calc_grid_idx:
     // grid_idx = head_y * 20 + head_x
