@@ -1,0 +1,18 @@
+02:36:02 [32mINFO [0m [src/main.c:14]: System configuration complete
+02:36:02 [94mTRACE[0m [src/system.c:44]: System power-on sequence initiated.
+02:36:02 [32mINFO [0m [src/bus.c:104]: Bus initialized: User RAM = 4096 bytes, Kernel RAM = 0 bytes.
+02:36:02 [94mTRACE[0m [src/serial.c:43]: Entering serial device initialization
+02:36:02 [94mTRACE[0m [src/serial.c:50]: Lock serial device
+02:36:02 [94mTRACE[0m [src/serial.c:55]: Open PTY virtual terminal
+02:36:02 [36mDEBUG[0m [src/serial.c:62]: UART available on /dev/pts/4
+02:36:02 [36mDEBUG[0m [src/serial.c:104]: Worker active
+02:36:02 [32mINFO [0m [src/system.c:131]: Hardware wiring complete. CPU anchored at reset vector 0xF0000000.
+02:36:02 [32mINFO [0m [src/main.c:19]: System powerup complete.
+02:36:02 [32mINFO [0m [src/debug/debug.c:305]: Initializing telnet remote access handling matrix...
+02:36:02 [32mINFO [0m [src/telnet.c:81]: Initializing target Telnet engine on port 4444...
+02:36:02 [32mINFO [0m [src/telnet.c:113]: Telnet server active and listening on port 4444.
+02:36:02 [32mINFO [0m [src/debug/debug.c:308]: Waiting for a debugger client connection on port 4444...
+02:36:02 [32mINFO [0m [src/telnet.c:132]: Waiting for remote debugger client connection...
+02:36:03 [32mINFO [0m [src/telnet.c:139]: Remote debugger attached successfully from 127.0.0.1:53154
+02:36:03 [94mTRACE[0m [src/telnet.c:149]: TX (Init Negotiation) raw stream [9 bytes]: FF FB 01 FF FB 03 FF FD 03 
+02:36:03 [36mDEBUG[0m [src/telnet.c:172]: Handshake completed cleanly. Pipeline ready for standard string commands.

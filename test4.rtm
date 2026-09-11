@@ -1,0 +1,7 @@
+.section ".text"
+    addi $sp, $zero, 0x1000
+l1:
+    addi $sp, $sp, 0
+l2:
+    addi $sp, $sp, 0
+    j l1

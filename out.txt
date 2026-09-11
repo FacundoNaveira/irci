@@ -1,0 +1,6 @@
+RTM32-0.1.1
+RTM32> Continuing execution...
+
+[Execution Fault: Core Exception 1 thrown at PC 0xF0000040]
+Core execution stopped. Current PC: 0xF0000040
+RTM32> 

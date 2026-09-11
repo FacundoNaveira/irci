@@ -1,0 +1,9 @@
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+RTM32-0.1.1
+RTM32> RTM32> Continuing execution...
+
+[Execution Fault: Core Exception 1 thrown at PC 0x00001004]
+Core execution stopped. Current PC: 0x00001004
+RTM32> Connection closed by foreign host.

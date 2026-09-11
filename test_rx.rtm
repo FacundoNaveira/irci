@@ -1,9 +1,0 @@
-.section ".text"
-    addi $sp, $zero, 0xFFC
-    addi $s2, $zero, -0x100
-loop:
-    lbu $t0, 0($s2)
-    beq $t0, $zero, loop
-    // if we get here, a char was read. Print it.
-    sb $t0, 0($s2)
-    trap 1

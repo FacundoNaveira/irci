@@ -1,0 +1,5 @@
+.section ".text"
+    addi $sp, $zero, 0x1000
+inicio:
+    addi $sp, $sp, 0
+    j inicio
