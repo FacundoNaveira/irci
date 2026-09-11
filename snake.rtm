@@ -5,6 +5,36 @@
     // $s2 = Dirección de consola
     addi $s2, $zero, -0x100
 
+    // Inicializar variables de estado
+    lci $t0, $zero, .hi16 dir_x
+    ori $t0, $t0, .lo16 dir_x
+    addi $t1, $zero, 1
+    sw $t1, 0($t0) // dir_x = 1
+    sw $zero, 4($t0) // dir_y = 0
+    
+    lci $t0, $zero, .hi16 head_idx
+    ori $t0, $t0, .lo16 head_idx
+    addi $t1, $zero, 2
+    sw $t1, 0($t0) // head_idx = 2
+    sw $zero, 4($t0) // tail_idx = 0
+    
+    lci $t0, $zero, .hi16 snake_x
+    ori $t0, $t0, .lo16 snake_x
+    addi $t1, $zero, 10
+    sw $t1, 0($t0)
+    addi $t1, $zero, 11
+    sw $t1, 4($t0)
+    addi $t1, $zero, 12
+    sw $t1, 8($t0)
+    
+    lci $t0, $zero, .hi16 snake_y
+    ori $t0, $t0, .lo16 snake_y
+    addi $t1, $zero, 10
+    sw $t1, 0($t0)
+    sw $t1, 4($t0)
+    sw $t1, 8($t0)
+
+
     // Inicializar el grid con ' ' (espacio = 32)
     lci $t0, $zero, .hi16 grid
     ori $t0, $t0, .lo16 grid
@@ -348,7 +378,18 @@ game_over:
     ori $a0, $a0, .lo16 gameover_str
     jal print_str
 game_over_loop:
+    lbu $t0, 0($s2)
+    beq $t0, $zero, game_over_loop
+    ori $t0, $t0, 32
+    addi $t1, $zero, 114 // 'r'
+    beq $t0, $t1, restart_game
     j game_over_loop
+    
+restart_game:
+    // Saltar al inicio (0x00000000)
+    lci $t0, $zero, 0
+    jr $t0, 0
+
 
 // --- Función print_str ---
 // $a0: Puntero al string null-terminated
@@ -364,7 +405,7 @@ print_str_end:
 
 .section ".data"
     // Secuencias ANSI (alineadas a 4 bytes incluyendo null)
-    gameover_str: .asciiz "\r\n\r\n    *** GAME OVER ***\r\n    Press 'q' to quit\r\n"
+    gameover_str: .asciiz "\r\n\r\n    *** GAME OVER ***\r\n    Press 'r' to restart or 'q' to quit\r\n"
     cls_str: .asciiz "\x1b[2J\x1b[?25l " // 11 + 1 null = 12 bytes
     home_str: .asciiz "\x1b[H"        // 3 + 1 null = 4 bytes
     
