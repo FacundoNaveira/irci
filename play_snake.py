@@ -16,6 +16,7 @@ def forward_uart(pty_path):
     # Open PTY
     try:
         fd = os.open(pty_path, os.O_RDWR | os.O_NONBLOCK)
+        tty.setraw(fd)
     except Exception as e:
         print(f"\r\nFailed to open UART PTY {pty_path}: {e}")
         return
