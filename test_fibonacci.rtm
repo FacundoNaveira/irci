@@ -1,0 +1,106 @@
+.section ".text"
+    // Initialize stack
+    addi $sp, $zero, 0x1000
+    
+    // UART address
+    addi $s2, $zero, -0x100
+
+    // Print welcome message
+    lci $a0, $zero, .hi16 msg
+    ori $a0, $a0, .lo16 msg
+    jal print_str
+
+    // Fib(0) = 0, Fib(1) = 1
+    addi $s0, $zero, 0 // a = 0
+    addi $s1, $zero, 1 // b = 1
+    addi $s3, $zero, 25 // count = 25
+
+fib_loop:
+    beq $s3, $zero, halt
+
+    // Print 'a'
+    add $a0, $zero, $s0
+    lci $a1, $zero, .hi16 buf
+    ori $a1, $a1, .lo16 buf
+    jal itoa
+
+    lci $a0, $zero, .hi16 buf
+    ori $a0, $a0, .lo16 buf
+    jal print_str
+
+    lci $a0, $zero, .hi16 newline
+    ori $a0, $a0, .lo16 newline
+    jal print_str
+
+    // next = a + b
+    add $t0, $s0, $s1
+    add $s0, $zero, $s1
+    add $s1, $zero, $t0
+
+    addi $s3, $s3, -1
+    j fib_loop
+
+halt:
+    // Print done message
+    lci $a0, $zero, .hi16 done_msg
+    ori $a0, $a0, .lo16 done_msg
+    jal print_str
+
+halt_loop:
+    j halt_loop
+
+// ----------------------------------------------------
+// print_str: Prints null-terminated string at $a0 to UART
+// Modifies: $a0, $t0
+// ----------------------------------------------------
+print_str:
+    lbu $t0, 0($a0)
+    beq $t0, $zero, print_str_end
+    sb $t0, 0($s2)
+    addi $a0, $a0, 1
+    j print_str
+print_str_end:
+    jr $ra, 0
+
+// ----------------------------------------------------
+// itoa: Convert unsigned integer in $a0 to string at $a1
+// Modifies: $a0, $a1, $t0, $t1, $t2
+// ----------------------------------------------------
+itoa:
+    // If $a0 is 0, handle specially
+    bne $a0, $zero, itoa_loop_start
+    addi $t0, $zero, 48 // '0'
+    sb $t0, 0($a1)
+    addi $t0, $zero, 0
+    sb $t0, 1($a1)
+    jr $ra, 0
+itoa_loop_start:
+    add $t2, $zero, $sp // Save original stack pointer
+itoa_loop:
+    beq $a0, $zero, itoa_reverse
+    addi $t0, $zero, 10
+    restu $t1, $a0, $t0 // $t1 = $a0 % 10
+    divu $a0, $a0, $t0 // $a0 = $a0 / 10
+    addi $t1, $t1, 48 // Convert to ASCII
+    // Push $t1 to stack (byte)
+    addi $sp, $sp, -1
+    sb $t1, 0($sp)
+    j itoa_loop
+itoa_reverse:
+
+    beq $sp, $t2, itoa_end // If $sp == original $sp
+    lbu $t1, 0($sp)
+    addi $sp, $sp, 1
+    sb $t1, 0($a1)
+    addi $a1, $a1, 1
+    j itoa_reverse
+itoa_end:
+    addi $t1, $zero, 0
+    sb $t1, 0($a1) // Null terminator
+    jr $ra, 0
+
+.section ".data"
+msg: .asciiz "Fibonacci Sequence (25 terms):\r\n"
+newline: .asciiz "\r\n"
+done_msg: .asciiz "Done!\r\n"
+buf: .pad 1 32
